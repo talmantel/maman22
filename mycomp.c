@@ -64,17 +64,17 @@ typedef union  {
     double d;
 } expectedParam;
 
-loopState runCommand();
-error getNextParamString(char *param, bool needsComma, int maxLength);
+loopState parseAndRunCommand();
 error finishReadingLine(bool returnErrorOnNotEmpty);
-complex *getVarByChar(char c);
-void printErrorAndFinishReadingLine(error err);
-void skipWhiteSpaces();
-error getExpectedParams(commandType type, expectedParam *params);
 error getCommandType(commandType *command);
+error getNextParamString(char *param, bool needsComma, int maxLength);
+error getExpectedParams(commandType type, expectedParam *params);
 error getComplexParam(expectedParam *param, bool needsComma);
 error getDoubleParam(expectedParam *param, bool needsComma);
 loopState callCommandWithParams(commandType command, expectedParam *params);
+void skipWhiteSpaces();
+void printErrorAndFinishReadingLine(error err);
+complex *getVarByChar(char c);
 
 complex A = {0.0, 0.0};
 complex B = {0.0, 0.0};
@@ -85,14 +85,14 @@ complex F = {0.0, 0.0};
 
 int main() {
     while(1){
-        printf("\nPlease enter a command\n");
-        if(runCommand() == FINISH)
+        printf("Please enter a command\n");
+        if(parseAndRunCommand() == FINISH)
             break;
     }
 }
 
 
-loopState runCommand(){
+loopState parseAndRunCommand(){
     expectedParam params[MAX_EXPECTED_PARAMS];
     commandType command;
     error result;
