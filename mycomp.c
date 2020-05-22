@@ -283,9 +283,9 @@ parseResult getComplexParam(expectedParam *param, bool needsComma){
 parseResult getDoubleParam(expectedParam *param, bool needsComma){
     int i = 0;
     bool hasPeriod = FALSE;
-    char paramString[MAX_COMPLEX_PARAM_LENGTH + 1];
+    char paramString[MAX_DOUBLE_PARAM_LENGTH + 1];
 
-    parseResult result = getNextParamString(paramString, needsComma, MAX_COMPLEX_PARAM_LENGTH + 1);
+    parseResult result = getNextParamString(paramString, needsComma, MAX_DOUBLE_PARAM_LENGTH + 1);
 
     if(result != VALID)
         return result;
