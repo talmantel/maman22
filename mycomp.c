@@ -16,49 +16,67 @@ typedef enum{FALSE, TRUE} bool;
 
 typedef enum{NONE, DOUBLE, VAR} expectedParamType;
 
-typedef enum{READ_COMP, PRINT_COMP, ADD_COMP, SUB_COMP, MULT_COMP_REAL, MULT_COMP_IMG, MULT_COMP_COMP, ABS_COMP, STOP} commandType;
+typedef enum{
+    READ_COMP,
+    PRINT_COMP,
+    ADD_COMP,
+    SUB_COMP,
+    MULT_COMP_REAL,
+    MULT_COMP_IMG,
+    MULT_COMP_COMP,
+    ABS_COMP,
+    STOP
+} commandType;
 
 /* Array defining the name for each command */
 char *commandNames[] = {
-        [READ_COMP] = "read_comp",
-        [PRINT_COMP] = "print_comp",
-        [ADD_COMP] = "add_comp",
-        [SUB_COMP] = "sub_comp",
-        [MULT_COMP_REAL] = "mult_comp_real",
-        [MULT_COMP_IMG] = "mult_comp_img",
-        [MULT_COMP_COMP] = "mult_comp_comp",
-        [ABS_COMP] = "abs_comp",
-        [STOP] = "stop"
+    "read_comp",
+    "print_comp",
+    "add_comp",
+    "sub_comp",
+    "mult_comp_real",
+    "mult_comp_img",
+    "mult_comp_comp",
+    "abs_comp",
+    "stop"
 };
 
 /* Array defining the expected parameter types for each command type */
 expectedParamType expectedParamsTypes[][MAX_EXPECTED_PARAMS] = {
-        [READ_COMP] = {VAR, DOUBLE, DOUBLE},
-        [PRINT_COMP] = {VAR, NONE, NONE},
-        [ADD_COMP] = {VAR, VAR, NONE},
-        [SUB_COMP] = {VAR, VAR, NONE},
-        [MULT_COMP_REAL] = {VAR, DOUBLE, NONE},
-        [MULT_COMP_IMG] =  {VAR, DOUBLE, NONE},
-        [MULT_COMP_COMP] =  {VAR, VAR, NONE},
-        [ABS_COMP] = {VAR, NONE, NONE},
-        [STOP] = {NONE, NONE, NONE}
+    {VAR, DOUBLE, DOUBLE},
+    {VAR, NONE, NONE},
+    {VAR, VAR, NONE},
+    {VAR, VAR, NONE},
+    {VAR, DOUBLE, NONE},
+    {VAR, DOUBLE, NONE},
+    {VAR, VAR, NONE},
+    {VAR, NONE, NONE},
+    {NONE, NONE, NONE}
 };
 
-typedef enum{ERR_UNDEFINED_VAR, ERR_UNDEFINED_COMMAND, ERR_PARAM_NOT_NUM,
-    ERR_MISSING_PARAM, ERR_EXTRA_TEXT, ERR_CONSECUTIVE_COMMAS,
-    ERR_MISSING_COMMA, ERR_ILLEGAL_COMMA, ERR_EOF_BEFORE_STOP, VALID} parseResult;
+typedef enum{
+    ERR_UNDEFINED_VAR,
+    ERR_UNDEFINED_COMMAND,
+    ERR_PARAM_NOT_NUM,
+    ERR_MISSING_PARAM,
+    ERR_EXTRA_TEXT,
+    ERR_CONSECUTIVE_COMMAS,
+    ERR_MISSING_COMMA,
+    ERR_ILLEGAL_COMMA,
+    ERR_EOF_BEFORE_STOP, VALID
+} parseResult;
 
 /* Array defining a human readable error for each parse error enum */
 char *errors[] = {
-        [ERR_UNDEFINED_VAR] = "Invalid variable name",
-        [ERR_UNDEFINED_COMMAND] = "Undefined command name",
-        [ERR_PARAM_NOT_NUM] = "Invalid parameter - not a number",
-        [ERR_MISSING_PARAM] = "Missing Parameter",
-        [ERR_EXTRA_TEXT] = "Extraneous text after command",
-        [ERR_CONSECUTIVE_COMMAS] = "Multiple consecutive commas",
-        [ERR_MISSING_COMMA] = "Missing comma",
-        [ERR_ILLEGAL_COMMA] = "Illegal comma",
-        [ERR_EOF_BEFORE_STOP] = "Reached end of file before 'stop' command"
+    "Invalid variable name",
+    "Undefined command name",
+    "Invalid parameter - not a number",
+    "Missing Parameter",
+    "Extraneous text after command",
+    "Multiple consecutive commas",
+    "Missing comma",
+    "Illegal comma",
+    "Reached end of file before 'stop' command"
 };
 
 /* combined type for complex and double*/
@@ -76,8 +94,9 @@ parseResult getComplexParam(expectedParam *param, bool needsComma);
 parseResult getDoubleParam(expectedParam *param, bool needsComma);
 void callCommandWithParams(commandType command, expectedParam *params);
 void skipWhiteSpaces();
-void printErrorAndFinishReadingLine(parseResult err);
+void handleParseError(parseResult err);
 complex *getVarByChar(char c);
+void printInputCommand();
 
 complex A = {0.0, 0.0};
 complex B = {0.0, 0.0};
@@ -93,6 +112,8 @@ int main() {
         printf("Please enter a command\n");
         state = parseAndRunCommand();
     }while(state == CONTINUE);
+
+    return 0;
 }
 
 /*
@@ -110,7 +131,7 @@ loopState parseAndRunCommand(){
     /* Check if there is any non-whitespace input to parse, and whether end of file was reached*/
     nextChar = getch();
     if(nextChar == EOF){
-        printErrorAndFinishReadingLine(ERR_EOF_BEFORE_STOP);
+        handleParseError(ERR_EOF_BEFORE_STOP);
         return FINISH;
     }
     else if(nextChar == '\n')
@@ -121,23 +142,25 @@ loopState parseAndRunCommand(){
     /* Parse the command name */
     result = getCommandType(&command);
     if(result != VALID) {
-        printErrorAndFinishReadingLine(result);
+        handleParseError(result);
         return CONTINUE;
     }
 
     /* parse parameters from input, depending on the command */
     result = getExpectedParams(command, params);
     if(result != VALID) {
-        printErrorAndFinishReadingLine(result);
+        handleParseError(result);
         return CONTINUE;
     }
 
     /* read until end of line, to make sure there isn't any extra text after the command and the expected paramenters */
     result = finishReadingLine(TRUE);
     if(result != VALID) {
-        printErrorAndFinishReadingLine(result);
+        handleParseError(result);
         return CONTINUE;
     }
+
+    printInputCommand();
 
     if(command == STOP)
         return FINISH;
@@ -216,6 +239,8 @@ parseResult getExpectedParams(commandType command, expectedParam params[]){
                 if(result != VALID)
                     return result;
                 break;
+            case NONE:
+                break;
         }
 
         if(needsComma == FALSE)
@@ -231,10 +256,9 @@ parseResult getExpectedParams(commandType command, expectedParam params[]){
     Returns a parseResult - a parse error or VALID if no errors were found
  */
 parseResult getComplexParam(expectedParam *param, bool needsComma){
-    int maxInputLength = MAX_COMPLEX_PARAM_LENGTH + 1;
-    char paramString[maxInputLength];
+    char paramString[MAX_COMPLEX_PARAM_LENGTH + 1];
 
-    parseResult result = getNextParamString(paramString, needsComma, maxInputLength);
+    parseResult result = getNextParamString(paramString, needsComma, MAX_COMPLEX_PARAM_LENGTH + 1);
     if(result != VALID)
         return result;
 
@@ -259,10 +283,9 @@ parseResult getComplexParam(expectedParam *param, bool needsComma){
 parseResult getDoubleParam(expectedParam *param, bool needsComma){
     int i = 0;
     bool hasPeriod = FALSE;
-    int maxInputLength = MAX_DOUBLE_PARAM_LENGTH + 1;
-    char paramString[maxInputLength];
+    char paramString[MAX_COMPLEX_PARAM_LENGTH + 1];
 
-    parseResult result = getNextParamString(paramString, needsComma, maxInputLength);
+    parseResult result = getNextParamString(paramString, needsComma, MAX_COMPLEX_PARAM_LENGTH + 1);
 
     if(result != VALID)
         return result;
@@ -392,12 +415,13 @@ void skipWhiteSpaces(){
 
 /*
  Receives a parseResult (anything but VALID)
- Prints a human readable error and discards the rest of the command (line from standard input)
+ Prints the input command along with a human readable error
  */
-void printErrorAndFinishReadingLine(parseResult err){
+void handleParseError(parseResult err){
     if(err != ERR_EOF_BEFORE_STOP)
         finishReadingLine(FALSE);
 
+    printInputCommand();
     printf("%s\n", errors[err]);
 }
 
@@ -425,6 +449,8 @@ parseResult finishReadingLine(bool shouldBeEmpty){
     Receives a command to execute and an array of parameters to execute the command with
  */
 void callCommandWithParams(commandType command, expectedParam *params) {
+    complex result;
+
     switch (command) {
         case READ_COMP:
             readComp(params[0].var, params[1].d, params[2].d);
@@ -433,22 +459,42 @@ void callCommandWithParams(commandType command, expectedParam *params) {
             printComp(params[0].var);
             break;
         case ADD_COMP:
-            addComp(params[0].var, params[1].var);
+            result = addComp(params[0].var, params[1].var);
+            printComp(&result);
             break;
         case SUB_COMP:
-            subComp(params[0].var, params[1].var);
+            result = subComp(params[0].var, params[1].var);
+            printComp(&result);
             break;
         case MULT_COMP_REAL:
-            multCompReal(params[0].var, params[1].d);
+            result = multCompReal(params[0].var, params[1].d);
+            printComp(&result);
             break;
         case MULT_COMP_IMG:
-            multCompImg(params[0].var, params[1].d);
+            result = multCompImg(params[0].var, params[1].d);
+            printComp(&result);
             break;
         case MULT_COMP_COMP:
-            multCompComp(params[0].var, params[1].var);
+            result = multCompComp(params[0].var, params[1].var);
+            printComp(&result);
             break;
         case ABS_COMP:
-            absComp(params[0].var);
+            result = absComp(params[0].var);
+            printComp(&result);
+            break;
+        case STOP:
             break;
     }
+}
+
+/* prints all the input read so far and clears the input storage */
+void printInputCommand(){
+    int *input = getStoredAndClear();
+    int i = 0;
+    putchar('\n');
+    while(input[i] != '\0' && input[i] != '\n' && input[i] != EOF) {
+        putchar(input[i]);
+        i++;
+    }
+    putchar('\n');
 }
